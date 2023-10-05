@@ -11,7 +11,7 @@ test_node_to_node() {
 
     # Interpret the results of the connectivity test
     sleep 5 # Give it time
-    node_to_node_result=$(gcloud beta network-management connectivity-tests describe $env_name-node-to-node \
+    node_to_node_result=$(gcloud beta network-management connectivity-tests describe $1-node-to-node \
         --format='table[no-heading](reachabilityDetails.result)')
 
     if [ $node_to_node_result == "REACHABLE" ]; then
@@ -28,3 +28,33 @@ test_node_to_node() {
         --async \
         -q
 } # end test_node_to_node
+
+test_node_to_gke_control_plane() {
+    # Perform the connectivity test
+    gcloud beta network-management connectivity-tests create $1-node-to-gke-control-plane \
+        --destination-gke-master-cluster="$2" \
+        --destination-port=443 \
+        --protocol=TCP \
+        --source-instance="$3" \
+        --source-network="$4" \
+        --project="$5"
+
+    # Interpret the results of the connectivity test
+    sleep 5 # Give it time
+    node_to_node_result=$(gcloud beta network-management connectivity-tests describe $1-node-to-gke-control-plane \
+        --format='table[no-heading](reachabilityDetails.result)')
+
+    if [ $node_to_node_result == "REACHABLE" ]; then
+        echo "No issues in Node to GKE Control Plane Connectivity"
+    else
+        echo "Issues in Node to GKE Controrl Plane Connectivity"
+        echo "Does your environment meet the following requirement?"
+        echo "https://cloud.google.com/composer/docs/composer-2/configure-private-ip#:~:text=Environment%27s%20cluster%20Control,all"
+    fi
+
+    # Delete the connectivity test
+    sleep 5
+    gcloud network-management connectivity-tests delete $1-node-to-gke-control-plane \
+        --async \
+        -q
+} # test_node_to_gke_control_plane

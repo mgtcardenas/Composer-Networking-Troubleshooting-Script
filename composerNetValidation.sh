@@ -6,14 +6,19 @@ project_id=$(gcloud config list core/project --format='value(core.project)')
 
 #### Obtaining necessary values ####
 #### TODO: Get these values through gcloud command
-echo -n "${bold}Composer Env. Name (Enter for default "my-shared-vpc-env")${normal}: "
+echo -n "Composer Env. Name (Enter for default "my-shared-vpc-env"): "
 IFS= read -r env_name
 env_name=${env_name:-"my-shared-vpc-env"}
 echo
 
-echo -n "${bold}Env. Network ID (Enter for default VPC from my-other-project)${normal}: "
+echo -n "Env. Network ID (Enter for default VPC from my-other-project): "
 IFS= read -r network
 network=${network:-"projects/my-other-project-737981/global/networks/default"}
+echo
+
+echo -n "Env. Location (Enter for default "us-central1": "
+IFS= read -r location
+location=${location:-"us-central1"}
 echo
 
 # Get a pair of VMs to perform the connectivity test
@@ -45,5 +50,16 @@ elif [ ${#vms[@]} -gt 1 ]; then # we have enough VMs to do the test
     # Strip "https://www.googleapis.com/compute/v1/projects/" from ${vms[1]}
     destination_vm_id=$(echo "${vms[1]}" | awk '{print substr($0,39)}') # consider doing '{print substr($0,39);exit}'
 
+    # TODO: We don't actually need to pass the parameters, we can just use the variable names :O
     test_node_to_node "$env_name" "$destination_vm_id" "$network" "$source_vm_id" "$project_id"
+
+    # Get GKE cluster name
+    gke_cluster_name=$(gcloud container clusters list \
+        --format="[no-heading](name)" \
+        --filter="resourceLabels.goog-composer-environment='$env_name'")
+
+    # Craft the GKE instance ID
+    gke_instance_id="projects/$project_id/locations/$location/clusters/$gke_cluster_name"
+
+    test_node_to_gke_control_plane "$env_name" "$gke_instance_id" "$source_vm_id" "$network" "$project_id"
 fi

@@ -1,9 +1,11 @@
 #/bin/bash
 
+source ./steps.sh
+
 project_id=$(gcloud config list core/project --format='value(core.project)')
 
 #### Obtaining necessary values ####
-#### Get these values through gcloud command
+#### TODO: Get these values through gcloud command
 echo -n "${bold}Composer Env. Name (Enter for default "my-shared-vpc-env")${normal}: "
 IFS= read -r env_name
 env_name=${env_name:-"my-shared-vpc-env"}
@@ -32,8 +34,7 @@ while [ true ]; do
     sleep 3
 done
 
-# The following command casts the string into an array
-vms=($self_links)
+vms=($self_links) # casts the string into an array of strings
 
 if [ -z "$vms" ]; then
     echo "I couldn't find VMs with labels containing env. name"
@@ -44,34 +45,5 @@ elif [ ${#vms[@]} -gt 1 ]; then # we have enough VMs to do the test
     # Strip "https://www.googleapis.com/compute/v1/projects/" from ${vms[1]}
     destination_vm_id=$(echo "${vms[1]}" | awk '{print substr($0,39)}') # consider doing '{print substr($0,39);exit}'
 
-    # Perform the connectivity test
-    # IMPORTANT: If you mix the VMs together, this won't work out due to the zones; we absolutely need the right zones
-    # TODO: Append the name of the env. to the connectivity tests
-    gcloud beta network-management connectivity-tests create $env_name-node-to-node \
-        --destination-instance="$destination_vm_id" \
-        --destination-network="$network" \
-        --destination-port="80" \
-        --protocol="TCP" \
-        --source-instance="$source_vm_id" \
-        --source-network="$network" \
-        --project="$project_id"
+    test_node_to_node "$env_name" "$destination_vm_id" "$network" "$source_vm_id" "$project_id"
 fi
-
-# Interpret the results of the connectivity test
-sleep 5 # Give it time
-node_to_node_result=$(gcloud beta network-management connectivity-tests describe $env_name-node-to-node \
-    --format='table[no-heading](reachabilityDetails.result)')
-
-if [ $node_to_node_result == "REACHABLE" ]; then
-    echo "No issues in Node to Node Connectivity"
-else
-    echo "Issues in Node to Node Connectivity"
-    echo "Does your environment meet the following requirement?"
-    echo "https://cloud.google.com/composer/docs/composer-2/configure-private-ip#:~:text=Environment%27s%20cluster%20Nodes,all"
-fi
-
-# Delete the connectivity test
-sleep 5
-gcloud network-management connectivity-tests delete $env_name-node-to-node \
-    --async \
-    -q

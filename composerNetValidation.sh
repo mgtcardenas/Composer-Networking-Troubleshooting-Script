@@ -64,4 +64,6 @@ elif [ ${#vms[@]} -gt 1 ]; then # we have enough VMs to do the test
     test_node_to_gke_control_plane "$env_name" "$gke_instance_id" "$source_vm_id" "$network" "$project_id"
 
     test_node_to_pod "$env_name" "$network" "$gke_cluster_name" "$project_id" "$source_vm_id"
+
+    test_node_to_google_services "$env_name" "$source_vm_id" "$network" "$project_id"
 fi

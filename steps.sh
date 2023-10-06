@@ -113,3 +113,57 @@ test_node_to_pod() {
         -q
 
 } # end test_node_to_pod
+
+test_node_to_google_services() {
+
+    zone_name=$(gcloud dns managed-zones list \
+        --format="[no-heading](name)" \
+        --filter="dnsName:composer.cloud.google.com.")
+
+    result=$(gcloud dns record-sets list \
+        --zone="$zone_name" \
+        --format="[no-heading](rrdatas)")
+
+    arr=($result)
+
+    ip=$(echo "${arr[0]}" | awk '{ print substr( $0, 3, length($0)-4 ) }')
+
+    if [ "$ip" = "199.36.153.4" ]; then
+        echo "You are trying to use 'restricted.googleapis.com'"
+    elif [ "$ip" = "199.36.153.8"]; then
+        echo "You are trying to use 'private.googleapis.com'"
+    else
+        echo "You are trying to contact public-serving IPs"
+        ip="172.217.4.187"
+    fi
+
+    gcloud beta network-management connectivity-tests create $1-node-to-goog-services \
+        --destination-ip-address="$ip" \
+        --destination-port=443 \
+        --protocol=TCP \
+        --source-instance="$2" \
+        --source-network="$3" \
+        --project="$4"
+
+    # Interpret the results of the connectivity test
+    sleep 5 # Give it time
+    result=$(gcloud beta network-management connectivity-tests describe $1-node-to-goog-services \
+        --format='table[no-heading](reachabilityDetails.result)')
+
+    if [ $result == "REACHABLE" ]; then
+        echo
+        echo "No issues in Node to Google Services Connectivity"
+        echo
+    else
+        echo "Issues in Node to Google Services Connectivity"
+        echo "Does your environment meet the following requirement?"
+        echo "https://cloud.google.com/composer/docs/composer-2/configure-private-ip#connectivity-domains:~:text=53-,Google%20APIs%20and%20services,443,-Environment%27s%20cluster%20Nodes"
+        echo
+    fi
+
+    # Delete the connectivity test
+    sleep 5
+    gcloud network-management connectivity-tests delete $1-node-to-goog-services \
+        --async \
+        -q
+} # end test_node_to_google_services

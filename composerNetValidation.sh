@@ -6,14 +6,14 @@ project_id=$(gcloud config list core/project --format='value(core.project)')
 
 #### Obtaining necessary values ####
 #### TODO: Get these values through gcloud command
-echo -n "Composer Env. Name (Enter for default "my-shared-vpc-env"): "
+echo -n "Composer Env. Name (Enter for default "gepe"): "
 IFS= read -r env_name
-env_name=${env_name:-"my-shared-vpc-env"}
+env_name=${env_name:-"gepe"}
 echo
 
-echo -n "Env. Network ID (Enter for default VPC from my-other-project): "
+echo -n "Env. Network ID (Enter for default VPC from my-project): "
 IFS= read -r network
-network=${network:-"projects/my-other-project-737981/global/networks/default"}
+network=${network:-"projects/my-project-737981/global/networks/default"}
 echo
 
 echo -n "Env. Location (Enter for default "us-central1": "
@@ -66,4 +66,6 @@ elif [ ${#vms[@]} -gt 1 ]; then # we have enough VMs to do the test
     test_node_to_pod "$env_name" "$network" "$gke_cluster_name" "$project_id" "$source_vm_id"
 
     test_node_to_google_services "$env_name" "$source_vm_id" "$network" "$project_id"
+
+    test_node_to_psc "$env_name" "$project_id" "$location" "$source_vm_id" "$network"
 fi

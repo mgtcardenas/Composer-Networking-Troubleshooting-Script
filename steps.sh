@@ -167,3 +167,41 @@ test_node_to_google_services() {
         --async \
         -q
 } # end test_node_to_google_services
+
+test_node_to_psc() {
+    psc_name=$(gcloud compute forwarding-rules list \
+        --format="[no-heading](name)" \
+        --filter="labels.goog-composer-environment='$1'")
+
+    psc_id="projects/$2/regions/$3/forwardingRules/$psc_name"
+
+    gcloud beta network-management connectivity-tests create "$1"-node-to-psc \
+        --destination-forwarding-rule="$psc_id" \
+        --destination-port=3306 \
+        --protocol=TCP \
+        --source-instance="$4" \
+        --source-network="$5" \
+        --project="$2"
+
+    # Interpret the results of the connectivity test
+    sleep 5 # Give it time
+    result=$(gcloud beta network-management connectivity-tests describe $1-node-to-psc \
+        --format='table[no-heading](reachabilityDetails.result)')
+
+    if [ $result == "REACHABLE" ]; then
+        echo
+        echo "No issues in Node to PSC Endpoint Connectivity"
+        echo
+    else
+        echo "Issues in Node to PSC Endpoint Connectivity"
+        echo "Does your environment meet the following requirement?"
+        echo "https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=(If%20your%20environment%20uses%20Private,3306%2C%203307"
+        echo
+    fi
+
+    # Delete the connectivity test
+    sleep 5
+    gcloud network-management connectivity-tests delete $1-node-to-psc \
+        --async \
+        -q
+} # end test_node_to_psc

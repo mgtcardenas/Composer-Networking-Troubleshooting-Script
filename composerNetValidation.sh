@@ -5,20 +5,26 @@ source ./steps.sh
 project_id=$(gcloud config list core/project --format='value(core.project)')
 
 #### Obtaining necessary values ####
-#### TODO: Get these values through gcloud command
-echo -n "Composer Env. Name (Enter for default "gepe"): "
-IFS= read -r env_name
-env_name=${env_name:-"gepe"}
-echo
-
-echo -n "Env. Network ID (Enter for default VPC from my-project): "
-IFS= read -r network
-network=${network:-"projects/my-project-737981/global/networks/default"}
-echo
-
-echo -n "Env. Location (Enter for default "us-central1": "
+echo -n "Env. Location (Enter for default "us-central1"): "
 IFS= read -r location
 location=${location:-"us-central1"}
+echo
+
+echo "Select composer instance to troubleshoot..."
+select env_name in $(gcloud composer environments list --locations=$location --format='value(name)');
+do
+    if [ -z "$env_name" ]; then
+        echo "Invalid selection"
+    else
+        echo "You have selected composer instance: $env_name"
+        break
+    fi
+done
+
+network=$(gcloud composer environments describe "$env_name" \
+    --location="$location" \
+    --format="value(config.nodeConfig.network)")
+network=${network:-"projects/$project_id/global/networks/default"}
 echo
 
 # Get a pair of VMs to perform the connectivity test

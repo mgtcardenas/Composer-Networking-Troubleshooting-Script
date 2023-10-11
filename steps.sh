@@ -1,4 +1,20 @@
 test_node_to_node() {
+    # TODO: Display the primary range and say from where to where we are doing the test
+    echo
+    echo "${bold}Performing Node to Node test...${normal}"
+    echo "See the following for reference: "
+    echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=Environment%27s%20cluster%20Nodes,all"
+    echo
+    echo "${bold}Test Name${normal}:            $1-node-to-node"
+    echo "${bold}Destination Instance${normal}: $2"
+    echo "${bold}Destination Network${normal}:  $3"
+    echo "${bold}Destination Port${normal}:     80"
+    echo "${bold}Protocol${normal}:             TCP"
+    echo "${bold}Source Intance${normal}:       $4"
+    echo "${bold}Source Network${normal}:       $3"
+    echo "${bold}Project${normal}:              $5"
+    echo
+
     # Perform the connectivity test
     gcloud beta network-management connectivity-tests create $1-node-to-node \
         --destination-instance="$2" \
@@ -15,6 +31,20 @@ test_node_to_node() {
 } # end test_node_to_node
 
 test_node_to_gke_control_plane() {
+    echo
+    echo "${bold}Performing Node to GKE Control Plane test...${normal}"
+    echo "See the following for reference: "
+    echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=Environment%27s%20cluster%20Control,all"
+    echo
+    echo "${bold}Test Name${normal}:                        $1-node-to-gke-control-plane"
+    echo "${bold}Destination GKE Master Cluster${normal}:   $2"
+    echo "${bold}Destination Port${normal}:                 443"
+    echo "${bold}Protocol${normal}:                         TCP"
+    echo "${bold}Source Instance${normal}:                  $3"
+    echo "${bold}Source Network${normal}:                   $4"
+    echo "${bold}Project${normal}:                          $5"
+    echo
+
     # Perform the connectivity test
     gcloud beta network-management connectivity-tests create $1-node-to-gke-control-plane \
         --destination-gke-master-cluster="$2" \
@@ -30,6 +60,13 @@ test_node_to_gke_control_plane() {
 } # end test_node_to_gke_control_plane
 
 test_node_to_pod() {
+
+    echo
+    echo "${bold}Performing Node to Pod test...${normal}"
+    echo "See the following for reference: "
+    echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=Environment%27s%20cluster%20Pods,all"
+    echo
+
     # Get the pod IP
     query='resource.labels.cluster_name="'$3'" jsonPayload.message=~".*conn-id:.*composer.*airflow-worker" resource.labels.container_name="gke-metadata-server"'
 
@@ -40,6 +77,20 @@ test_node_to_pod() {
     tmp_result=($result)                                           # something like... [conn-id:692e22c0b2112e12 ip:10.55.0.4 pod:composer-2-4-4-airflow-2-5...
     pod_ip=$(echo "${tmp_result[1]}" | awk '{print substr($0,4)}') # consider doing '{print substr($0,39);exit}'
     pod_ip=$(echo "$pod_ip" | xargs)                               # remove possible trailing space just in case
+
+    # TODO: Display the pods secondary range (from composer list operation)
+    # Say we are usng <EXAMPLE_IP> as part of this test
+
+    echo "${bold}Test Name${normal}:                $1-node-to-pod"
+    echo "${bold}Destination IP Address${normal}:   $pod_ip"
+    echo "${bold}Destination Network${normal}:      $2"
+    echo "${bold}Destination Port${normal}:         80"
+    echo "${bold}Protocol${normal}:                 TCP"
+    echo "${bold}Destination Project${normal}:      $4"
+    echo "${bold}Source Instance${normal}:          $5"
+    echo "${bold}Source Network${normal}:           $2"
+    echo "${bold}Project${normal}:                  $4"
+    echo
 
     # Perform the test
     gcloud beta network-management connectivity-tests create $1-node-to-pod \
@@ -58,6 +109,15 @@ test_node_to_pod() {
 } # end test_node_to_pod
 
 test_node_to_google_services() {
+    echo
+    echo "${bold}Performing Node to Google Services test...${normal}"
+    echo "See the following for reference: "
+    echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=53-,Google%20APIs%20and%20services,443,-Environment%27s%20cluster%20Nodes"
+    echo
+
+    # TODO: Will you be contacting restricted private or none of those?
+    # Last part to verify is the DNS check
+    # We could try to create a GKE cluster that creates a workload that downloads resources from artifact registry
 
     zone_name=$(gcloud dns managed-zones list \
         --format="[no-heading](name)" \
@@ -80,6 +140,15 @@ test_node_to_google_services() {
         ip="172.217.4.187"
     fi
 
+    echo "${bold}Test Name${normal}:                $1-node-to-goog-services"
+    echo "${bold}Destination IP Address${normal}:   $ip"
+    echo "${bold}Destination Port${normal}:         443"
+    echo "${bold}Protocol${normal}:                 TCP"
+    echo "${bold}Source Instance${normal}:          $2"
+    echo "${bold}Source Network${normal}:           $3"
+    echo "${bold}Project${normal}:                  $4"
+    echo
+
     gcloud beta network-management connectivity-tests create $1-node-to-goog-services \
         --destination-ip-address="$ip" \
         --destination-port=443 \
@@ -94,11 +163,25 @@ test_node_to_google_services() {
 } # end test_node_to_google_services
 
 test_node_to_psc() {
+    echo
+    echo "${bold}Performing Node to PSC Endpoint test...${normal}"
+    echo "See the following for reference: "
+    echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=(If%20your%20environment%20uses%20Private,3306%2C%203307"
+    echo
+
     psc_name=$(gcloud compute forwarding-rules list \
         --format="[no-heading](name)" \
         --filter="labels.goog-composer-environment='$1'")
 
     psc_id="projects/$2/regions/$3/forwardingRules/$psc_name"
+
+    echo "${bold}Test Name${normal}:                                        $1-node-to-psc"
+    echo "${bold}Destination Forwarding Rule (aka. PSC Endpoint)${normal}:  $psc_id"
+    echo "${bold}Destination Port${normal}:                                 3306"
+    echo "${bold}Protocol${normal}:                                         TCP"
+    echo "${bold}Source Instance${normal}:                                  $4"
+    echo "${bold}Project${normal}:                                          $2"
+    echo
 
     gcloud beta network-management connectivity-tests create $1-node-to-psc \
         --destination-forwarding-rule="$psc_id" \
@@ -111,9 +194,13 @@ test_node_to_psc() {
     interpret_test "$1-node-to-psc" "Node to PSC Endpoint"
 
     delete_test "$1-node-to-psc"
+
+    # TODO: We should test for the 3307 port as well
 } # end test_node_to_psc
 
 interpret_test() {
+    # TODO: Maybe give an option to test all the pods/all the node
+
     sleep 5 # Give it time
 
     result=$(gcloud beta network-management connectivity-tests describe "$1" \
@@ -121,10 +208,11 @@ interpret_test() {
 
     if [ $result == "REACHABLE" ]; then
         echo
-        echo "No issues in $2 Connectivity"
+        echo "${bold}${green}No issues in $2 Connectivity${normal}"
         echo
     else
-        echo "Issues in $2 Connectivity"
+        # TODO: Print the details of a test if it failed
+        echo "${bold}${red}Issues in $2 Connectivity${normal}"
         echo "Does your environment meet the following requirement?"
 
         case $2 in
@@ -153,8 +241,10 @@ interpret_test() {
 } # interpret_test
 
 delete_test() {
-    sleep 5 # Give it time
-    gcloud network-management connectivity-tests delete "$1" \
-        --async \
-        -q
+    if [ "$persist_tests" == "No" ]; then
+        sleep 5 # Give it time
+        gcloud network-management connectivity-tests delete "$1" \
+            --async \
+            -q
+    fi
 } # delete_test

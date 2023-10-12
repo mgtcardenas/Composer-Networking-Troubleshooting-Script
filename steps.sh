@@ -5,27 +5,27 @@ test_node_to_node() {
     echo "See the following for reference: "
     echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=Environment%27s%20cluster%20Nodes,all"
     echo
-    echo "${bold}Test Name${normal}:            $1-node-to-node"
-    echo "${bold}Destination Instance${normal}: $2"
+    echo "${bold}Test Name${normal}:            $env_name-node-to-node"
+    echo "${bold}Destination Instance${normal}: $destination_vm_id"
     echo "${bold}Destination Port${normal}:     443"
     echo "${bold}Protocol${normal}:             TCP"
-    echo "${bold}Source Intance${normal}:       $3"
-    echo "${bold}Project${normal}:              $4"
+    echo "${bold}Source Intance${normal}:       $source_vm_id"
+    echo "${bold}Project${normal}:              $project_id"
     echo
 
     # Perform the connectivity test
     # TODO: Test for a random number for the port; though be cautios that there are some ports that are blocked always
     # TODO: Also test for a random port in UDP
-    gcloud beta network-management connectivity-tests create $1-node-to-node \
-        --destination-instance="$2" \
+    gcloud beta network-management connectivity-tests create $env_name-node-to-node \
+        --destination-instance="$destination_vm_id" \
         --destination-port="443" \
         --protocol="TCP" \
-        --source-instance="$3" \
-        --project="$4"
+        --source-instance="$source_vm_id" \
+        --project="$project_id"
 
-    interpret_test "$1-node-to-node" "Node to Node"
+    interpret_test "$env_name-node-to-node" "Node to Node"
 
-    delete_test "$1-node-to-node"
+    delete_test "$env_name-node-to-node"
 } # end test_node_to_node
 
 test_node_to_gke_control_plane() {
@@ -34,25 +34,25 @@ test_node_to_gke_control_plane() {
     echo "See the following for reference: "
     echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=Environment%27s%20cluster%20Control,all"
     echo
-    echo "${bold}Test Name${normal}:                        $1-node-to-gke-control-plane"
-    echo "${bold}Destination GKE Master Cluster${normal}:   $2"
+    echo "${bold}Test Name${normal}:                        $env_name-node-to-gke-control-plane"
+    echo "${bold}Destination GKE Master Cluster${normal}:   $gke_instance_id"
     echo "${bold}Destination Port${normal}:                 443"
     echo "${bold}Protocol${normal}:                         TCP"
-    echo "${bold}Source Instance${normal}:                  $3"
-    echo "${bold}Project${normal}:                          $4"
+    echo "${bold}Source Instance${normal}:                  $source_vm_id"
+    echo "${bold}Project${normal}:                          $project_id"
     echo
 
     # Perform the connectivity test
-    gcloud beta network-management connectivity-tests create $1-node-to-gke-control-plane \
-        --destination-gke-master-cluster="$2" \
+    gcloud beta network-management connectivity-tests create $env_name-node-to-gke-control-plane \
+        --destination-gke-master-cluster="$gke_instance_id" \
         --destination-port="443" \
         --protocol="TCP" \
-        --source-instance="$3" \
-        --project="$4"
+        --source-instance="$source_vm_id" \
+        --project="$project_id"
 
-    interpret_test "$1-node-to-gke-control-plane" "Node to GKE Control Plane"
+    interpret_test "$env_name-node-to-gke-control-plane" "Node to GKE Control Plane"
 
-    delete_test "$1-node-to-gke-control-plane"
+    delete_test "$env_name-node-to-gke-control-plane"
 } # end test_node_to_gke_control_plane
 
 test_node_to_pod() {
@@ -64,7 +64,7 @@ test_node_to_pod() {
     echo
 
     # Get the pod IP
-    query='resource.labels.cluster_name="'$2'" jsonPayload.message=~".*conn-id:.*composer.*airflow-worker" resource.labels.container_name="gke-metadata-server"'
+    query='resource.labels.cluster_name="'$gke_cluster_name'" jsonPayload.message=~".*conn-id:.*composer.*airflow-worker" resource.labels.container_name="gke-metadata-server"'
 
     result=$(gcloud logging read "$query" \
         --limit=1 \
@@ -77,27 +77,27 @@ test_node_to_pod() {
     # TODO: Display the pods secondary range (from composer list operation)
     # Say we are usng <EXAMPLE_IP> as part of this test
 
-    echo "${bold}Test Name${normal}:                $1-node-to-pod"
+    echo "${bold}Test Name${normal}:                $env_name-node-to-pod"
     echo "${bold}Destination IP Address${normal}:   $pod_ip"
     echo "${bold}Destination Port${normal}:         80"
     echo "${bold}Protocol${normal}:                 TCP"
-    echo "${bold}Destination Project${normal}:      $3"
-    echo "${bold}Source Instance${normal}:          $4"
-    echo "${bold}Project${normal}:                  $3"
+    echo "${bold}Destination Project${normal}:      $project_id"
+    echo "${bold}Source Instance${normal}:          $source_vm_id"
+    echo "${bold}Project${normal}:                  $project_id"
     echo
 
     # Perform the test
-    gcloud beta network-management connectivity-tests create $1-node-to-pod \
+    gcloud beta network-management connectivity-tests create $env_name-node-to-pod \
         --destination-ip-address="$pod_ip" \
         --destination-port=80 \
-        --destination-project="$3" \
+        --destination-project="$project_id" \
         --protocol=TCP \
-        --source-instance="$4" \
-        --project="$3"
+        --source-instance="$source_vm_id" \
+        --project="$project_id"
 
-    interpret_test "$1-node-to-pod" "Node to Pod"
+    interpret_test "$env_name-node-to-pod" "Node to Pod"
 
-    delete_test "$1-node-to-pod"
+    delete_test "$env_name-node-to-pod"
 } # end test_node_to_pod
 
 test_node_to_google_services() {
@@ -132,24 +132,24 @@ test_node_to_google_services() {
         ip="172.217.4.187"
     fi
 
-    echo "${bold}Test Name${normal}:                $1-node-to-goog-services"
+    echo "${bold}Test Name${normal}:                $env_name-node-to-goog-services"
     echo "${bold}Destination IP Address${normal}:   $ip"
     echo "${bold}Destination Port${normal}:         443"
     echo "${bold}Protocol${normal}:                 TCP"
-    echo "${bold}Source Instance${normal}:          $2"
-    echo "${bold}Project${normal}:                  $3"
+    echo "${bold}Source Instance${normal}:          $source_vm_id"
+    echo "${bold}Project${normal}:                  $project_id"
     echo
 
-    gcloud beta network-management connectivity-tests create $1-node-to-goog-services \
+    gcloud beta network-management connectivity-tests create $env_name-node-to-goog-services \
         --destination-ip-address="$ip" \
         --destination-port=443 \
         --protocol=TCP \
-        --source-instance="$2" \
-        --project="$3"
+        --source-instance="$source_vm_id" \
+        --project="$project_id"
 
-    interpret_test "$1-node-to-goog-services" "Node to Google Services"
+    interpret_test "$env_name-node-to-goog-services" "Node to Google Services"
 
-    delete_test "$1-node-to-goog-services"
+    delete_test "$env_name-node-to-goog-services"
 } # end test_node_to_google_services
 
 test_node_to_psc() {
@@ -161,28 +161,28 @@ test_node_to_psc() {
 
     psc_name=$(gcloud compute forwarding-rules list \
         --format="[no-heading](name)" \
-        --filter="labels.goog-composer-environment='$1'")
+        --filter="labels.goog-composer-environment='$env_name'")
 
-    psc_id="projects/$2/regions/$3/forwardingRules/$psc_name"
+    psc_id="projects/$project_id/regions/$location/forwardingRules/$psc_name"
 
-    echo "${bold}Test Name${normal}:                                        $1-node-to-psc"
+    echo "${bold}Test Name${normal}:                                        $env_name-node-to-psc"
     echo "${bold}Destination Forwarding Rule (aka. PSC Endpoint)${normal}:  $psc_id"
     echo "${bold}Destination Port${normal}:                                 3306"
     echo "${bold}Protocol${normal}:                                         TCP"
-    echo "${bold}Source Instance${normal}:                                  $4"
-    echo "${bold}Project${normal}:                                          $2"
+    echo "${bold}Source Instance${normal}:                                  $source_vm_id"
+    echo "${bold}Project${normal}:                                          $project_id"
     echo
 
-    gcloud beta network-management connectivity-tests create $1-node-to-psc \
+    gcloud beta network-management connectivity-tests create $env_name-node-to-psc \
         --destination-forwarding-rule="$psc_id" \
         --destination-port=3306 \
         --protocol=TCP \
-        --source-instance="$4" \
-        --project="$2"
+        --source-instance="$source_vm_id" \
+        --project="$project_id"
 
-    interpret_test "$1-node-to-psc" "Node to PSC Endpoint"
+    interpret_test "$env_name-node-to-psc" "Node to PSC Endpoint"
 
-    delete_test "$1-node-to-psc"
+    delete_test "$env_name-node-to-psc"
 
     # TODO: We should test for the 3307 port as well
 } # end test_node_to_psc
@@ -194,8 +194,8 @@ test_node_to_peering_range() {
     echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=(If%20your%20environment%20uses%20VPC,3306%2C%203307"
     echo
 
-    peering_range=$(gcloud composer environments describe $1 \
-        --location=$2 \
+    peering_range=$(gcloud composer environments describe $env_name \
+        --location=$location \
         --format="table[no-heading](config.privateEnvironmentConfig.cloudComposerNetworkIpv4ReservedRange)")
 
     ip=$(echo "$peering_range" | awk '{split($0,a,"/"); print a[1]}') # split by /
@@ -207,25 +207,25 @@ test_node_to_peering_range() {
     let "last_octet++"
     ip="$first_octet.$second_octet.$third_octet.$last_octet" # join back together
 
-    echo "${bold}Test Name${normal}:                $1-node-to-peering-range"
+    echo "${bold}Test Name${normal}:                $env_name-node-to-peering-range"
     echo "${bold}Destination IP Address${normal}:   $ip"
     echo "${bold}Destination Port${normal}:         3306"
     echo "${bold}Protocol${normal}:                 TCP"
-    echo "${bold}Source Instance${normal}:          $3"
-    echo "${bold}Project${normal}:                  $4"
+    echo "${bold}Source Instance${normal}:          $source_vm_id"
+    echo "${bold}Project${normal}:                  $project_id"
     echo
 
     # Perform the test
-    gcloud beta network-management connectivity-tests create $1-node-to-peering-range \
+    gcloud beta network-management connectivity-tests create $env_name-node-to-peering-range \
         --destination-ip-address="$ip" \
         --destination-port=3306 \
         --protocol=TCP \
-        --source-instance="$3" \
-        --project="$4"
+        --source-instance="$source_vm_id" \
+        --project="$project_id"
 
-    interpret_test "$1-node-to-peering-range" "Node to Peering Range"
+    interpret_test "$env_name-node-to-peering-range" "Node to Peering Range"
 
-    delete_test "$1-node-to-peering-range"
+    delete_test "$env_name-node-to-peering-range"
 
 } # test_node_to_peering_range
 

@@ -117,30 +117,30 @@ elif [ ${#vms[@]} -gt 1 ]; then # we have enough VMs to do the test
 
     # TODO: We don't actually need to pass the parameters, we can just use the variable names :O
     test_node_to_node
-
-    # Get GKE cluster name
-    gke_cluster_name=$(gcloud container clusters list \
-        --format="[no-heading](name)" \
-        --filter="resourceLabels.goog-composer-environment='$env_name'")
-
-    # Craft the GKE instance ID
-    gke_instance_id="projects/$project_id/locations/$location/clusters/$gke_cluster_name"
-
-    test_node_to_gke_control_plane
-
-    test_node_to_pod
-
-    test_node_to_google_services
-
-    conn_type=$(gcloud composer environments describe $env_name \
-        --location=$location \
-        --format="table[no-heading](config.privateEnvironmentConfig.networkingConfig.connectionType)")
-
-    if [ "$conn_type" == "VPC_PEERING" ]; then
-        test_node_to_peering_range 
-    else
-        test_node_to_psc
-    fi
-
-    # TODO: Give a summary at the end of the number of tests that succeeded
 fi
+
+# Get GKE cluster name
+gke_cluster_name=$(gcloud container clusters list \
+    --format="[no-heading](name)" \
+    --filter="resourceLabels.goog-composer-environment='$env_name'")
+
+# Craft the GKE instance ID
+gke_instance_id="projects/$project_id/locations/$location/clusters/$gke_cluster_name"
+
+test_node_to_gke_control_plane
+
+test_node_to_pod
+
+test_node_to_google_services
+
+conn_type=$(gcloud composer environments describe $env_name \
+    --location=$location \
+    --format="table[no-heading](config.privateEnvironmentConfig.networkingConfig.connectionType)")
+
+if [ "$conn_type" == "VPC_PEERING" ]; then
+    test_node_to_peering_range
+else
+    test_node_to_psc
+fi
+
+# TODO: Give a summary at the end of the number of tests that succeeded

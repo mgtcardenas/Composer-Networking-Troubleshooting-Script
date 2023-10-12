@@ -10,7 +10,6 @@ test_node_to_node() {
     echo "${bold}Destination Port${normal}:     443"
     echo "${bold}Protocol${normal}:             TCP"
     echo "${bold}Source Intance${normal}:       $source_vm_id"
-    echo "${bold}Project${normal}:              $project_id"
     echo
 
     # Perform the connectivity test
@@ -20,8 +19,7 @@ test_node_to_node() {
         --destination-instance="$destination_vm_id" \
         --destination-port="443" \
         --protocol="TCP" \
-        --source-instance="$source_vm_id" \
-        --project="$project_id"
+        --source-instance="$source_vm_id"
 
     interpret_test "$env_name-node-to-node" "Node to Node"
 
@@ -39,7 +37,6 @@ test_node_to_gke_control_plane() {
     echo "${bold}Destination Port${normal}:                 443"
     echo "${bold}Protocol${normal}:                         TCP"
     echo "${bold}Source Instance${normal}:                  $source_vm_id"
-    echo "${bold}Project${normal}:                          $project_id"
     echo
 
     # Perform the connectivity test
@@ -47,8 +44,7 @@ test_node_to_gke_control_plane() {
         --destination-gke-master-cluster="$gke_instance_id" \
         --destination-port="443" \
         --protocol="TCP" \
-        --source-instance="$source_vm_id" \
-        --project="$project_id"
+        --source-instance="$source_vm_id"
 
     interpret_test "$env_name-node-to-gke-control-plane" "Node to GKE Control Plane"
 
@@ -56,7 +52,6 @@ test_node_to_gke_control_plane() {
 } # end test_node_to_gke_control_plane
 
 test_node_to_pod() {
-
     echo
     echo "${bold}Performing Node to Pod test...${normal}"
     echo "See the following for reference: "
@@ -83,7 +78,6 @@ test_node_to_pod() {
     echo "${bold}Protocol${normal}:                 TCP"
     echo "${bold}Destination Project${normal}:      $project_id"
     echo "${bold}Source Instance${normal}:          $source_vm_id"
-    echo "${bold}Project${normal}:                  $project_id"
     echo
 
     # Perform the test
@@ -92,8 +86,7 @@ test_node_to_pod() {
         --destination-port=80 \
         --destination-project="$project_id" \
         --protocol=TCP \
-        --source-instance="$source_vm_id" \
-        --project="$project_id"
+        --source-instance="$source_vm_id"
 
     interpret_test "$env_name-node-to-pod" "Node to Pod"
 
@@ -137,15 +130,13 @@ test_node_to_google_services() {
     echo "${bold}Destination Port${normal}:         443"
     echo "${bold}Protocol${normal}:                 TCP"
     echo "${bold}Source Instance${normal}:          $source_vm_id"
-    echo "${bold}Project${normal}:                  $project_id"
     echo
 
     gcloud beta network-management connectivity-tests create $env_name-node-to-goog-services \
         --destination-ip-address="$ip" \
         --destination-port=443 \
         --protocol=TCP \
-        --source-instance="$source_vm_id" \
-        --project="$project_id"
+        --source-instance="$source_vm_id"
 
     interpret_test "$env_name-node-to-goog-services" "Node to Google Services"
 
@@ -170,15 +161,13 @@ test_node_to_psc() {
     echo "${bold}Destination Port${normal}:                                 3306"
     echo "${bold}Protocol${normal}:                                         TCP"
     echo "${bold}Source Instance${normal}:                                  $source_vm_id"
-    echo "${bold}Project${normal}:                                          $project_id"
     echo
 
     gcloud beta network-management connectivity-tests create $env_name-node-to-psc \
         --destination-forwarding-rule="$psc_id" \
         --destination-port=3306 \
         --protocol=TCP \
-        --source-instance="$source_vm_id" \
-        --project="$project_id"
+        --source-instance="$source_vm_id"
 
     interpret_test "$env_name-node-to-psc" "Node to PSC Endpoint"
 
@@ -212,7 +201,6 @@ test_node_to_peering_range() {
     echo "${bold}Destination Port${normal}:         3306"
     echo "${bold}Protocol${normal}:                 TCP"
     echo "${bold}Source Instance${normal}:          $source_vm_id"
-    echo "${bold}Project${normal}:                  $project_id"
     echo
 
     # Perform the test
@@ -220,8 +208,7 @@ test_node_to_peering_range() {
         --destination-ip-address="$ip" \
         --destination-port=3306 \
         --protocol=TCP \
-        --source-instance="$source_vm_id" \
-        --project="$project_id"
+        --source-instance="$source_vm_id"
 
     interpret_test "$env_name-node-to-peering-range" "Node to Peering Range"
 

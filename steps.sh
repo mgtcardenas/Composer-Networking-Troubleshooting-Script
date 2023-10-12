@@ -156,24 +156,40 @@ test_node_to_psc() {
 
     psc_id="projects/$project_id/regions/$location/forwardingRules/$psc_name"
 
-    echo "${bold}Test Name${normal}:                                        $env_name-node-to-psc"
+    echo "${bold}Test Name${normal}:                                        $env_name-node-to-psc-3306"
     echo "${bold}Destination Forwarding Rule (aka. PSC Endpoint)${normal}:  $psc_id"
     echo "${bold}Destination Port${normal}:                                 3306"
     echo "${bold}Protocol${normal}:                                         TCP"
     echo "${bold}Source Instance${normal}:                                  $source_vm_id"
     echo
 
-    gcloud beta network-management connectivity-tests create $env_name-node-to-psc \
+    gcloud beta network-management connectivity-tests create $env_name-node-to-psc-3306 \
         --destination-forwarding-rule="$psc_id" \
         --destination-port=3306 \
         --protocol=TCP \
         --source-instance="$source_vm_id"
 
-    interpret_test "$env_name-node-to-psc" "Node to PSC Endpoint"
+    interpret_test "$env_name-node-to-psc-3306" "Node to PSC Endpoint (Port 3306)"
 
-    delete_test "$env_name-node-to-psc"
+    delete_test "$env_name-node-to-psc-3306"
 
-    # TODO: We should test for the 3307 port as well
+    echo
+    echo "${bold}Test Name${normal}:                                        $env_name-node-to-psc-3307"
+    echo "${bold}Destination Forwarding Rule (aka. PSC Endpoint)${normal}:  $psc_id"
+    echo "${bold}Destination Port${normal}:                                 3307"
+    echo "${bold}Protocol${normal}:                                         TCP"
+    echo "${bold}Source Instance${normal}:                                  $source_vm_id"
+    echo
+
+    gcloud beta network-management connectivity-tests create $env_name-node-to-psc-3307 \
+        --destination-forwarding-rule="$psc_id" \
+        --destination-port=3307 \
+        --protocol=TCP \
+        --source-instance="$source_vm_id"
+
+    interpret_test "$env_name-node-to-psc-3307" "Node to PSC Endpoint (Port 3307)"
+
+    delete_test "$env_name-node-to-psc-3307"
 } # end test_node_to_psc
 
 test_node_to_peering_range() {
@@ -196,7 +212,7 @@ test_node_to_peering_range() {
     let "last_octet++"
     ip="$first_octet.$second_octet.$third_octet.$last_octet" # join back together
 
-    echo "${bold}Test Name${normal}:                $env_name-node-to-peering-range"
+    echo "${bold}Test Name${normal}:                $env_name-node-to-peering-range-3306"
     echo "${bold}Destination IP Address${normal}:   $ip"
     echo "${bold}Destination Port${normal}:         3306"
     echo "${bold}Protocol${normal}:                 TCP"
@@ -204,16 +220,34 @@ test_node_to_peering_range() {
     echo
 
     # Perform the test
-    gcloud beta network-management connectivity-tests create $env_name-node-to-peering-range \
+    gcloud beta network-management connectivity-tests create $env_name-node-to-peering-range-3306 \
         --destination-ip-address="$ip" \
         --destination-port=3306 \
         --protocol=TCP \
         --source-instance="$source_vm_id"
 
-    interpret_test "$env_name-node-to-peering-range" "Node to Peering Range"
+    interpret_test "$env_name-node-to-peering-range-3306" "Node to Peering Range (Port 3306)"
 
-    delete_test "$env_name-node-to-peering-range"
+    delete_test "$env_name-node-to-peering-range-3306"
 
+    echo
+    echo "${bold}Test Name${normal}:                $env_name-node-to-peering-range-3307"
+    echo "${bold}Destination IP Address${normal}:   $ip"
+    echo "${bold}Destination Port${normal}:         3307"
+    echo "${bold}Protocol${normal}:                 TCP"
+    echo "${bold}Source Instance${normal}:          $source_vm_id"
+    echo
+
+    # Perform the test
+    gcloud beta network-management connectivity-tests create $env_name-node-to-peering-range-3307 \
+        --destination-ip-address="$ip" \
+        --destination-port=3307 \
+        --protocol=TCP \
+        --source-instance="$source_vm_id"
+
+    interpret_test "$env_name-node-to-peering-range-3307" "Node to Peering Range (Port 3307)"
+
+    delete_test "$env_name-node-to-peering-range-3307"
 } # test_node_to_peering_range
 
 interpret_test() {

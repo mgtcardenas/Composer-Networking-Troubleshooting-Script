@@ -13,14 +13,13 @@ normal=$(tput sgr0)
 
 project_id=$(gcloud config list core/project --format='value(core.project)')
 
-# Tell the customer what we will be doing, the permissions and have cst opt to delete the tests when we are done or not
-
 echo "${yellow}This troubleshooting script will run a series of ${bold}connectivity tests${normal}${yellow}"
 echo "to ${bold}rule out Firewall rules${normal}${yellow} as an issue for creating your Composer environment."
 echo
 echo "All tests will be done with a sample VM in your environment's GKE cluster as a source"
 echo "(provided your GKE cluster can create successfully)."
 echo "The connectivity tests can be found in http://console.cloud.google.com/net-intelligence/connectivity/tests/ as they are being executed."
+echo "You can always check the code yourself in https://github.com/mgtcardenas/Composer-Networking-Troubleshooting-Script"
 echo
 echo "A user must have ${bold}'Network Management Admin (roles/networkmanagement.admin)'${normal}${yellow} role to create and run connectivity tests."
 echo "If you don't have this role granted, either..."
@@ -117,8 +116,8 @@ elif [ ${#vms[@]} -gt 1 ]; then # we have enough VMs to do the test
     destination_vm_id=$(echo "${vms[1]}" | awk '{print substr($0,39)}') # consider doing '{print substr($0,39);exit}'
 
     # TODO: We don't actually need to pass the parameters, we can just use the variable names :O
-    test_node_to_node "$env_name" "$destination_vm_id" "$network" "$source_vm_id" "$project_id"
-
+    test_node_to_node "$env_name" "$destination_vm_id" "$source_vm_id" "$project_id"
+    
     # Get GKE cluster name
     gke_cluster_name=$(gcloud container clusters list \
         --format="[no-heading](name)" \
@@ -127,13 +126,21 @@ elif [ ${#vms[@]} -gt 1 ]; then # we have enough VMs to do the test
     # Craft the GKE instance ID
     gke_instance_id="projects/$project_id/locations/$location/clusters/$gke_cluster_name"
 
-    test_node_to_gke_control_plane "$env_name" "$gke_instance_id" "$source_vm_id" "$network" "$project_id"
+    test_node_to_gke_control_plane "$env_name" "$gke_instance_id" "$source_vm_id" "$project_id"
 
-    test_node_to_pod "$env_name" "$network" "$gke_cluster_name" "$project_id" "$source_vm_id"
+    test_node_to_pod "$env_name" "$gke_cluster_name" "$project_id" "$source_vm_id"
 
-    test_node_to_google_services "$env_name" "$source_vm_id" "$network" "$project_id"
+    test_node_to_google_services "$env_name" "$source_vm_id" "$project_id"
 
-    test_node_to_psc "$env_name" "$project_id" "$location" "$source_vm_id" "$network"
+    conn_type=$(gcloud composer environments describe $env_name \
+        --location=$location \
+        --format="table[no-heading](config.privateEnvironmentConfig.networkingConfig.connectionType)")
+
+    if [ "$conn_type" == "VPC_PEERING" ]; then
+        test_node_to_peering_range "$env_name" "$location" "$source_vm_id" "$project_id"
+    else
+        test_node_to_psc "$env_name" "$project_id" "$location" "$source_vm_id" "$network"
+    fi
 
     # TODO: Give a summary at the end of the number of tests that succeeded
 fi

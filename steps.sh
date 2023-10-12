@@ -230,7 +230,8 @@ interpret_test() {
         echo
     else
         echo "${bold}${red}Issues in $2 Connectivity${normal}"
-        # TODO: Print the details of a test if it failed
+        gcloud beta network-management connectivity-tests describe "$1" \
+            --format="(reachabilityDetails)"
         echo
     fi
 } # interpret_test

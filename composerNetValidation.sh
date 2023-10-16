@@ -79,6 +79,19 @@ network=$(gcloud composer environments describe "$env_name" \
 network=${network:-"projects/$project_id/global/networks/default"}
 echo
 
+echo "${bold}Will you be contacting restricted.googleapis.com, private.googleapis.com or Public Google APIs IPs?${normal}"
+google_apis=("RESTRICTED" "PRIVATE" "PUBLIC_OR_NOT_SURE")
+
+select contacted_service in "${google_apis[@]}"; do
+    if [ -z "$contacted_service" ]; then
+        echo "Invalid selection"
+    else
+        echo "You have selected: $contacted_service"
+        echo
+        break
+    fi
+done
+
 # Get a pair of VMs to perform the connectivity test
 # TODO: consider using `gcloud container operations list` to determine if and when the GKE cluster has been successfully created
 while [ true ]; do

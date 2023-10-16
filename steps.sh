@@ -100,30 +100,17 @@ test_node_to_google_services() {
     echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=53-,Google%20APIs%20and%20services,443,-Environment%27s%20cluster%20Nodes"
     echo
 
-    # TODO: Will you be contacting restricted private or none of those?
-    # Last part to verify is the DNS check
-    # We could try to create a GKE cluster that creates a workload that downloads resources from artifact registry
-
-    zone_name=$(gcloud dns managed-zones list \
-        --format="[no-heading](name)" \
-        --filter="dnsName:composer.cloud.google.com.")
-
-    result=$(gcloud dns record-sets list \
-        --zone="$zone_name" \
-        --format="[no-heading](rrdatas)")
-
-    arr=($result)
-
-    ip=$(echo "${arr[0]}" | awk '{ print substr( $0, 3, length($0)-4 ) }')
-
-    if [ "$ip" = "199.36.153.4" ]; then
-        echo "You are trying to use 'restricted.googleapis.com'"
-    elif [ "$ip" = "199.36.153.8"]; then
-        echo "You are trying to use 'private.googleapis.com'"
-    else
-        echo "You are trying to contact public-serving IPs"
+    case $contacted_service in
+    "RESTRICTED")
+        ip="199.36.153.4"
+        ;;
+    "PRIVATE")
+        ip="199.36.153.8"
+        ;;
+    "PUBLIC_OR_NOT_SURE")
         ip="172.217.4.187"
-    fi
+        ;;
+    esac
 
     echo "${bold}Test Name${normal}:                $env_name-node-to-goog-services"
     echo "${bold}Destination IP Address${normal}:   $ip"

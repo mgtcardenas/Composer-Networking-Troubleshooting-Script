@@ -61,9 +61,20 @@ test_node_to_pod() {
     # Get the pod IP
     query='resource.labels.cluster_name="'$gke_cluster_name'" jsonPayload.message=~".*conn-id:.*composer.*airflow-worker" resource.labels.container_name="gke-metadata-server"'
 
-    result=$(gcloud logging read "$query" \
-        --limit=1 \
-        --format="value(jsonPayload.message)")
+    while [ true ]; do
+        result=$(gcloud logging read "$query" \
+            --limit=1 \
+            --format="value(jsonPayload.message)")
+
+        if [ -z "$result" ]; then
+            echo "Attempting to find pod IP..."
+        else
+            echo "Pod IP found!"
+            echo
+            break
+        fi
+        sleep 5
+    done
 
     tmp_result=($result)                                           # something like... [conn-id:692e22c0b2112e12 ip:10.55.0.4 pod:composer-2-4-4-airflow-2-5...
     pod_ip=$(echo "${tmp_result[1]}" | awk '{print substr($0,4)}') # consider doing '{print substr($0,39);exit}'

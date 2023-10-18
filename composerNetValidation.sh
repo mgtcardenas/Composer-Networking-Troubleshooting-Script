@@ -13,6 +13,9 @@ normal=$(tput sgr0)
 
 project_id=$(gcloud config list core/project --format='value(core.project)')
 
+# TODO: Say you shouldn't have other environments or GKE clusters creating while the script is running.
+# Otherwise, there's a good chance the script won't work correctly.
+
 echo "${yellow}This troubleshooting script will run a series of ${bold}connectivity tests${normal}${yellow}"
 echo "to ${bold}rule out Firewall rules${normal}${yellow} as an issue for creating your Composer environment."
 echo
@@ -92,8 +95,46 @@ select contacted_service in "${google_apis[@]}"; do
     fi
 done
 
-# Get a pair of VMs to perform the connectivity test
-# TODO: consider using `gcloud container operations list` to determine if and when the GKE cluster has been successfully created
+# Check if the GKE cluster gets created successfully
+createTime=$(date -v-10M +"%Y-%m-%dT%H:%M:%S") # timesamp in the format of GKE `createTime`, 10 minutes ago
+
+echo "Searching for GKE cluster created after $createTime (10 minutes ago)..."
+
+while [ true ]; do
+    # Use the operation status...
+    status=$(gcloud container operations list \
+        --location="$location" \
+        --format="[no-heading](status)" \
+        --limit="1" \
+        --filter="operationType='CREATE_CLUSTER' AND startTime>="$createTime"")
+
+    # If no status could be found, inform the user that no GKE cluster within create time could be found
+    if [ -z "$status" ]; then
+        echo "No GKE cluster operation can be found"
+        break
+    fi
+
+    # While status = RUNNING, print the operation details
+    if [ "$status" == "RUNNING" ]; then
+        echo "$(gcloud container operations list \
+            --location="$location" \
+            --format="[no-heading](detail)" \
+            --limit="1" \
+            --filter="operationType='CREATE_CLUSTER' AND startTime>="$createTime""). Checking again in 10 seconds..."
+    else
+        # If we are done, print all the operation to see what may have gone wrong
+        gcloud container operations list \
+            --location="$location" \
+            --format=yaml \
+            --limit="1" \
+            --filter="operationType='CREATE_CLUSTER' AND startTime>="$createTime""
+        break
+    fi
+    sleep 10
+done
+
+# Get a pair of VMs to perform the connectivity tests
+echo "Attempting to find VMs tagged with the environment's name..."
 while [ true ]; do
     # The following command returns a string of VM self links, but not an array
     # Self link is the closest thing to what we want (Instance ID); self link is in the form "https://www.googleapis.com/compute/v1/projects/<project>/zones/<zone>/instances/<instance-name>"
@@ -142,8 +183,6 @@ gke_instance_id="projects/$project_id/locations/$location/clusters/$gke_cluster_
 
 test_node_to_gke_control_plane
 
-test_node_to_pod
-
 test_node_to_google_services
 
 conn_type=$(gcloud composer environments describe $env_name \
@@ -155,5 +194,7 @@ if [ "$conn_type" == "VPC_PEERING" ]; then
 else
     test_node_to_psc
 fi
+
+test_node_to_pod
 
 # TODO: Give a summary at the end of the number of tests that succeeded

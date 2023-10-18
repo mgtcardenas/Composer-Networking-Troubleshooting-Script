@@ -96,9 +96,18 @@ select contacted_service in "${google_apis[@]}"; do
 done
 
 # Check if the GKE cluster gets created successfully
-createTime=$(date -v-10M +"%Y-%m-%dT%H:%M:%S") # timesamp in the format of GKE `createTime`, 10 minutes ago
+createTime=$(date -d "-10 min" "+%Y-%m-%dT%H:%M:%S") # timesamp in the format of GKE `createTime`, 10 minutes ago
 
+if [ -z "$createTime" ]; then
+    echo
+    echo "Please ignore previous error, as it is caused by a bash version"
+    echo
+    createTime=$(date -v-10M +"%Y-%m-%dT%H:%M:%S") # timesamp in the format of GKE `createTime`, 10 minutes ago
+fi
+
+echo
 echo "Searching for GKE cluster created after $createTime (10 minutes ago)..."
+echo
 
 while [ true ]; do
     # Use the operation status...
@@ -110,7 +119,9 @@ while [ true ]; do
 
     # If no status could be found, inform the user that no GKE cluster within create time could be found
     if [ -z "$status" ]; then
-        echo "No GKE cluster operation can be found"
+        echo
+        echo "  ${bold}No GKE cluster operation could be found${normal}"
+        echo
         break
     fi
 
@@ -134,7 +145,9 @@ while [ true ]; do
 done
 
 # Get a pair of VMs to perform the connectivity tests
+echo
 echo "Attempting to find VMs tagged with the environment's name..."
+echo
 while [ true ]; do
     # The following command returns a string of VM self links, but not an array
     # Self link is the closest thing to what we want (Instance ID); self link is in the form "https://www.googleapis.com/compute/v1/projects/<project>/zones/<zone>/instances/<instance-name>"
@@ -142,8 +155,11 @@ while [ true ]; do
         --format='[no-heading](selfLink)' \
         --filter="labels.goog-composer-environment='$env_name'")
     if [ -z "$self_links" ]; then
+        echo
         echo "No VMs to perform the tests yet..."
+        echo
     else
+        echo
         echo "At least one VM has been found..."
         echo
         sleep 3

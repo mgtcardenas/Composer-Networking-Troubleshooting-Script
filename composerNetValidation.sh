@@ -109,6 +109,8 @@ echo
 echo "Searching for GKE cluster created after $createTime (10 minutes ago)..."
 echo
 
+backoffTime=2
+
 while [ true ]; do
     # Use the operation status...
     status=$(gcloud container operations list \
@@ -131,7 +133,7 @@ while [ true ]; do
             --location="$location" \
             --format="[no-heading](detail)" \
             --limit="1" \
-            --filter="operationType='CREATE_CLUSTER' AND startTime>="$createTime""). Checking again in 10 seconds..."
+            --filter="operationType='CREATE_CLUSTER' AND startTime>="$createTime""). Checking again in $backoffTime seconds..."
     else
         # If we are done, print all the operation to see what may have gone wrong
         gcloud container operations list \
@@ -141,13 +143,17 @@ while [ true ]; do
             --filter="operationType='CREATE_CLUSTER' AND startTime>="$createTime""
         break
     fi
-    sleep 10
+    sleep $backoffTime
+    backoffTime=$(($backoffTime * 2))
 done
 
 # Get a pair of VMs to perform the connectivity tests
 echo
 echo "Attempting to find VMs tagged with the environment's name..."
 echo
+
+backoffTime=2
+
 while [ true ]; do
     # The following command returns a string of VM self links, but not an array
     # Self link is the closest thing to what we want (Instance ID); self link is in the form "https://www.googleapis.com/compute/v1/projects/<project>/zones/<zone>/instances/<instance-name>"
@@ -156,16 +162,17 @@ while [ true ]; do
         --filter="labels.goog-composer-environment='$env_name'")
     if [ -z "$self_links" ]; then
         echo
-        echo "No VMs to perform the tests yet..."
+        echo "No VMs to perform the tests yet. Checking again in $backoffTime seconds..."
         echo
+        sleep $backoffTime
+        backoffTime=$(($backoffTime * 2))
     else
         echo
         echo "At least one VM has been found..."
         echo
-        sleep 3
         break
     fi
-    sleep 3
+    sleep 3 # ocnstantly just wait 3 seconds
 done
 
 vms=($self_links) # casts the string into an array of strings

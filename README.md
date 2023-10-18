@@ -85,6 +85,7 @@ At some point, the script will ask the following:
      - `199.36.153.8`, `199.36.153.9`, `199.36.153.10`, `199.36.153.11`
    - Pubilc Google APIs
      - For example, `172.217.4.187`. You can use `dig` command to discover public-facing IPs of services like `storage.googleapis.com`.
+ - (Optional) An example Pod IP (in case you don't want to wait until the script is able to find a pod IP in `Cloud Logging`).
 
 ### Caveats
  - There's a small chance that the connectivity tests could persist unexpectedly if there's a problem deleting them or if the script is terminated (CTRL + C) before issuing the delete request. If you are concerned about this leftover tests, please double check that no unwanted tests remain in http://console.cloud.google.com/net-intelligence/connectivity/tests/

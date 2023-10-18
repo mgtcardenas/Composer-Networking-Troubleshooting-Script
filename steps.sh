@@ -58,30 +58,37 @@ test_node_to_pod() {
     echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=Environment%27s%20cluster%20Pods,all"
     echo
 
-    # Get the pod IP
-    query='resource.labels.cluster_name="'$gke_cluster_name'" jsonPayload.message=~".*conn-id:.*composer.*airflow-worker" resource.labels.container_name="gke-metadata-server"'
+    echo
+    echo "${bold}Enter an example Pod IP e.g. 10.11.129.7 (Empty response will have the script search Cloud Logging for it)${normal}. "
+    echo "You can find the pod IP under 'Environment details > Resources > GKE cluster > Workloads > airflow-worker-<hash> > YAML tab > pod IP (at the bottom)'."
+    echo -n "Pod IP: "
+    IFS= read -r pod_ip
+    pod_ip=${pod_ip:-""}
 
-    while [ true ]; do
-        result=$(gcloud logging read "$query" \
-            --limit=1 \
-            --format="value(jsonPayload.message)")
+    if [ -z "$pod_ip" ]; then
+        # Get the pod IP from Cloud Logging
+        query='resource.labels.cluster_name="'$gke_cluster_name'" jsonPayload.message=~".*conn-id:.*composer.*airflow-worker" resource.labels.container_name="gke-metadata-server"'
 
-        if [ -z "$result" ]; then
-            echo "Attempting to find pod IP..."
-        else
-            echo "Pod IP found!"
-            echo
-            break
-        fi
-        sleep 5
-    done
+        while [ true ]; do
+            result=$(gcloud logging read "$query" \
+                --limit=1 \
+                --format="value(jsonPayload.message)")
 
-    tmp_result=($result)                                           # something like... [conn-id:692e22c0b2112e12 ip:10.55.0.4 pod:composer-2-4-4-airflow-2-5...
-    pod_ip=$(echo "${tmp_result[1]}" | awk '{print substr($0,4)}') # consider doing '{print substr($0,39);exit}'
-    pod_ip=$(echo "$pod_ip" | xargs)                               # remove possible trailing space just in case
+            if [ -z "$result" ]; then
+                echo "Attempting to find pod IP..."
+            else
+                echo "Pod IP found!"
+                echo
+                break
+            fi
+            sleep 5
+        done
+        tmp_result=($result)                                           # something like... [conn-id:692e22c0b2112e12 ip:10.55.0.4 pod:composer-2-4-4-airflow-2-5...
+        pod_ip=$(echo "${tmp_result[1]}" | awk '{print substr($0,4)}') # consider doing '{print substr($0,39);exit}'
+        pod_ip=$(echo "$pod_ip" | xargs)                               # remove possible trailing space just in case
+    fi
 
     # TODO: Display the pods secondary range (from composer list operation)
-    # Say we are usng <EXAMPLE_IP> as part of this test
 
     echo "${bold}Test Name${normal}:                $env_name-node-to-pod"
     echo "${bold}Destination IP Address${normal}:   $pod_ip"

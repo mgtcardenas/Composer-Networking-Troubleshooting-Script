@@ -167,8 +167,13 @@ gke_cluster_name=$(gcloud container clusters list \
     --format="[no-heading](name)" \
     --filter="resourceLabels.goog-composer-environment='$env_name'")
 
-# Craft the GKE instance ID
-gke_instance_id="projects/$project_id/locations/$location/clusters/$gke_cluster_name"
+# Craft the GKE instance ID (depending on Composer version)
+if [[ $version == composer-1* ]]; then # GKE cluster is zonal, not regional
+    gke_instance_id="projects/$project_id/zones/$zone/clusters/$gke_cluster_name"    
+else
+    gke_instance_id="projects/$project_id/locations/$location/clusters/$gke_cluster_name"
+fi
+
 
 test_node_to_gke_control_plane
 

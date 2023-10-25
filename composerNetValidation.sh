@@ -158,7 +158,6 @@ elif [ ${#vms[@]} -gt 1 ]; then # we have enough VMs to do the test
     # Strip "https://www.googleapis.com/compute/v1/projects/" from ${vms[1]}
     destination_vm_id=$(echo "${vms[1]}" | awk '{print substr($0,39)}') # consider doing '{print substr($0,39);exit}'
 
-    # TODO: We don't actually need to pass the parameters, we can just use the variable names :O
     test_node_to_node
 fi
 
@@ -169,11 +168,10 @@ gke_cluster_name=$(gcloud container clusters list \
 
 # Craft the GKE instance ID (depending on Composer version)
 if [[ $version == composer-1* ]]; then # GKE cluster is zonal, not regional
-    gke_instance_id="projects/$project_id/zones/$zone/clusters/$gke_cluster_name"    
+    gke_instance_id="projects/$project_id/zones/$zone/clusters/$gke_cluster_name"
 else
     gke_instance_id="projects/$project_id/locations/$location/clusters/$gke_cluster_name"
 fi
-
 
 test_node_to_gke_control_plane
 
@@ -183,10 +181,14 @@ conn_type=$(gcloud composer environments describe $env_name \
     --location=$location \
     --format="table[no-heading](config.privateEnvironmentConfig.networkingConfig.connectionType)")
 
-if [ "$conn_type" == "VPC_PEERING" ]; then
+if [[ $version == composer-1* ]]; then # Composer 1 always uses peerings
     test_node_to_peering_range
 else
-    test_node_to_psc
+    if [ "$conn_type" == "VPC_PEERING" ]; then
+        test_node_to_peering_range
+    else
+        test_node_to_psc
+    fi
 fi
 
 test_node_to_pod

@@ -205,9 +205,15 @@ test_node_to_peering_range() {
     echo " - https://cloud.google.com/composer/docs/composer-2/configure-private-ip#private-ip-firewall-rules:~:text=(If%20your%20environment%20uses%20VPC,3306%2C%203307"
     echo
 
-    peering_range=$(gcloud composer environments describe $env_name \
-        --location=$location \
-        --format="table[no-heading](config.privateEnvironmentConfig.cloudComposerNetworkIpv4ReservedRange)")
+    if [[ $version == composer-1* ]]; then
+        peering_range=$(gcloud composer environments describe $env_name \
+            --location=$location \
+            --format="table[no-heading](config.privateEnvironmentConfig.webServerIpv4ReservedRange)")
+    else
+        peering_range=$(gcloud composer environments describe $env_name \
+            --location=$location \
+            --format="table[no-heading](config.privateEnvironmentConfig.cloudComposerNetworkIpv4ReservedRange)")
+    fi
 
     ip=$(echo "$peering_range" | awk '{split($0,a,"/"); print a[1]}') # split by /
 

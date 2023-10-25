@@ -59,34 +59,36 @@ test_node_to_pod() {
     echo
 
     echo
-    echo "${bold}Enter an example Pod IP e.g. 10.11.129.7 (Empty response will have the script search Cloud Logging for it)${normal}. "
+    echo "${bold}Enter an example Pod IP e.g. 10.11.129.7 (IF COMPOSER 2, empty response will have the script search Cloud Logging for it)${normal}. "
     echo "You can find the pod IP under 'Environment details > Resources > GKE cluster > Workloads > airflow-worker-<hash> > YAML tab > pod IP (at the bottom)'."
     echo -n "Pod IP: "
     IFS= read -r pod_ip
     pod_ip=${pod_ip:-""}
 
-    if [ -z "$pod_ip" ]; then
-        # Get the pod IP from Cloud Logging
-        query='resource.labels.cluster_name="'$gke_cluster_name'" jsonPayload.message=~".*conn-id:.*composer.*airflow-worker" resource.labels.container_name="gke-metadata-server"'
-        backoffTime=2
-        while [ true ]; do
-            result=$(gcloud logging read "$query" \
-                --limit=1 \
-                --format="value(jsonPayload.message)")
+    if [[ $version == composer-2* ]]; then
+        if [ -z "$pod_ip" ]; then
+            # Get the pod IP from Cloud Logging
+            query='resource.labels.cluster_name="'$gke_cluster_name'" jsonPayload.message=~".*conn-id:.*composer.*airflow-worker" resource.labels.container_name="gke-metadata-server"'
+            backoffTime=2
+            while [ true ]; do
+                result=$(gcloud logging read "$query" \
+                    --limit=1 \
+                    --format="value(jsonPayload.message)")
 
-            if [ -z "$result" ]; then
-                echo "No Pod IP found yet.  Checking again in $backoffTime seconds..."
-            else
-                echo "Pod IP found!"
-                echo
-                break
-            fi
-            sleep $backoffTime
-            backoffTime=$(($backoffTime * 2))
-        done
-        tmp_result=($result)                                           # something like... [conn-id:692e22c0b2112e12 ip:10.55.0.4 pod:composer-2-4-4-airflow-2-5...
-        pod_ip=$(echo "${tmp_result[1]}" | awk '{print substr($0,4)}') # consider doing '{print substr($0,39);exit}'
-        pod_ip=$(echo "$pod_ip" | xargs)                               # remove possible trailing space just in case
+                if [ -z "$result" ]; then
+                    echo "No Pod IP found yet.  Checking again in $backoffTime seconds..."
+                else
+                    echo "Pod IP found!"
+                    echo
+                    break
+                fi
+                sleep $backoffTime
+                backoffTime=$(($backoffTime * 2))
+            done
+            tmp_result=($result)                                           # something like... [conn-id:692e22c0b2112e12 ip:10.55.0.4 pod:composer-2-4-4-airflow-2-5...
+            pod_ip=$(echo "${tmp_result[1]}" | awk '{print substr($0,4)}') # consider doing '{print substr($0,39);exit}'
+            pod_ip=$(echo "$pod_ip" | xargs)                               # remove possible trailing space just in case
+        fi
     fi
 
     # TODO: Display the pods secondary range (from composer list operation)

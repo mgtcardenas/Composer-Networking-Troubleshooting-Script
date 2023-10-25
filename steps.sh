@@ -284,3 +284,107 @@ delete_test() {
             -q
     fi
 } # delete_test
+
+monitor_autopilot_cluster() {
+    backoffTime=2
+
+    echo
+    echo "Checking cluster for location $location: $(gcloud container operations list \
+        --location="$location" \
+        --format="[no-heading](targetLink)" \
+        --limit="1" \
+        --filter="operationType='CREATE_CLUSTER'" \
+        --sort-by=~"startTime")"
+    echo
+
+    while [ true ]; do
+        # Use the operation status...
+        status=$(gcloud container operations list \
+            --location="$location" \
+            --format="[no-heading](status)" \
+            --limit="1" \
+            --filter="operationType='CREATE_CLUSTER'" \
+            --sort-by=~"startTime")
+
+        # If no status could be found, inform the user that no GKE cluster within create time could be found
+        if [ -z "$status" ]; then
+            echo
+            echo "  ${bold}No GKE cluster operation could be found${normal}"
+            echo
+            break
+        fi
+
+        # While status = RUNNING, print the operation details
+        if [ "$status" == "RUNNING" ]; then
+            echo "$(gcloud container operations list \
+                --location="$location" \
+                --format="[no-heading](detail)" \
+                --limit="1" \
+                --filter="operationType='CREATE_CLUSTER'" \
+                --sort-by=~"startTime"). Checking again in $backoffTime seconds..."
+        else
+            # If we are done, print all the operation to see what may have gone wrong
+            gcloud container operations list \
+                --location="$location" \
+                --format=yaml \
+                --limit="1" \
+                --filter="operationType='CREATE_CLUSTER'" \
+                --sort-by=~"startTime"
+            break
+        fi
+        sleep $backoffTime
+        backoffTime=$(($backoffTime * 2))
+    done
+} # monitor_autopilot_cluster
+
+monitor_standard_cluster() {
+    backoffTime=2
+
+    echo
+    echo "Checking cluster for zone $zone (as per env. description): $(gcloud container operations list \
+        --location="$zone" \
+        --format="[no-heading](targetLink)" \
+        --limit="1" \
+        --filter="operationType='CREATE_CLUSTER'" \
+        --sort-by=~"startTime")"
+    echo
+
+    while [ true ]; do
+        # Use the operation status...
+        status=$(gcloud container operations list \
+            --location="$zone" \
+            --format="[no-heading](status)" \
+            --limit="1" \
+            --filter="operationType='CREATE_CLUSTER'" \
+            --sort-by=~"startTime")
+
+        # If no status could be found, inform the user that no GKE cluster within create time could be found
+        if [ -z "$status" ]; then
+            echo
+            echo "  ${bold}No GKE cluster operation could be found${normal}"
+            echo
+            break
+        fi
+
+        # While status = RUNNING, print the operation details
+        if [ "$status" == "RUNNING" ]; then
+            echo "$(gcloud container operations list \
+                --location="$zone" \
+                --format="[no-heading](detail)" \
+                --limit="1" \
+                --filter="operationType='CREATE_CLUSTER'" \
+                --sort-by=~"startTime"). Checking again in $backoffTime seconds..."
+        else
+            # If we are done, print all the operation to see what may have gone wrong
+            gcloud container operations list \
+                --location="$zone" \
+                --format=yaml \
+                --limit="1" \
+                --filter="operationType='CREATE_CLUSTER'" \
+                --sort-by=~"startTime"
+            break
+        fi
+        sleep $backoffTime
+        backoffTime=$(($backoffTime * 2))
+    done
+} # monitor_standard_cluster

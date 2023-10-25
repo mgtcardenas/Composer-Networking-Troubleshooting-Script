@@ -82,6 +82,10 @@ network=$(gcloud composer environments describe "$env_name" \
 network=${network:-"projects/$project_id/global/networks/default"}
 echo
 
+version=$(gcloud composer environments describe $env_name \
+    --location $location \
+    --format="value(config.softwareConfig.imageVersion)")
+
 echo "${bold}Will you be contacting restricted.googleapis.com, private.googleapis.com or Public Google APIs IPs?${normal}"
 google_apis=("RESTRICTED" "PRIVATE" "PUBLIC_OR_NOT_SURE")
 
@@ -89,63 +93,27 @@ select contacted_service in "${google_apis[@]}"; do
     if [ -z "$contacted_service" ]; then
         echo "Invalid selection"
     else
-        echo "You have selected: $contacted_service"
+        echo "${bold}You have selected${normal}: $contacted_service"
         echo
         break
     fi
 done
 
-# Check if the GKE cluster gets created successfully
-createTime=$(date -d "-10 min" "+%Y-%m-%dT%H:%M:%S") # timesamp in the format of GKE `createTime`, 10 minutes ago
-
-if [ -z "$createTime" ]; then
-    echo
-    echo "Please ignore previous error, as it is caused by a bash version"
-    echo
-    createTime=$(date -v-10M +"%Y-%m-%dT%H:%M:%S") # timesamp in the format of GKE `createTime`, 10 minutes ago
-fi
-
 echo
-echo "Searching for GKE cluster created after $createTime (10 minutes ago)..."
+echo "Checking operation of last GKE cluster creation" # Check if the GKE cluster gets created successfully
 echo
 
-backoffTime=2
+if [[ $version == composer-1* ]]; then # GKE cluster is zonal, not regional
 
-while [ true ]; do
-    # Use the operation status...
-    status=$(gcloud container operations list \
+    zone_uri=$(gcloud composer environments describe "$env_name" \
         --location="$location" \
-        --format="[no-heading](status)" \
-        --limit="1" \
-        --filter="operationType='CREATE_CLUSTER' AND startTime>="$createTime"")
+        --format="value(config.nodeConfig.location)")
+    zone=$(echo "$zone_uri" | awk '{split($0,a,"/"); print a[4]}') # split by /
 
-    # If no status could be found, inform the user that no GKE cluster within create time could be found
-    if [ -z "$status" ]; then
-        echo
-        echo "  ${bold}No GKE cluster operation could be found${normal}"
-        echo
-        break
-    fi
-
-    # While status = RUNNING, print the operation details
-    if [ "$status" == "RUNNING" ]; then
-        echo "$(gcloud container operations list \
-            --location="$location" \
-            --format="[no-heading](detail)" \
-            --limit="1" \
-            --filter="operationType='CREATE_CLUSTER' AND startTime>="$createTime""). Checking again in $backoffTime seconds..."
-    else
-        # If we are done, print all the operation to see what may have gone wrong
-        gcloud container operations list \
-            --location="$location" \
-            --format=yaml \
-            --limit="1" \
-            --filter="operationType='CREATE_CLUSTER' AND startTime>="$createTime""
-        break
-    fi
-    sleep $backoffTime
-    backoffTime=$(($backoffTime * 2))
-done
+    monitor_standard_cluster
+else
+    monitor_autopilot_cluster
+fi
 
 # Get a pair of VMs to perform the connectivity tests
 echo
@@ -161,9 +129,7 @@ while [ true ]; do
         --format='[no-heading](selfLink)' \
         --filter="labels.goog-composer-environment='$env_name'")
     if [ -z "$self_links" ]; then
-        echo
         echo "No VMs to perform the tests yet. Checking again in $backoffTime seconds..."
-        echo
         sleep $backoffTime
         backoffTime=$(($backoffTime * 2))
     else
